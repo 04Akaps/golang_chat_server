@@ -1,59 +1,57 @@
-import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useRef, useContext } from "react";
+
 import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client";
+
 import styled from "styled-components";
-import { allUsersRoute, host } from "../utils/APIRoutes";
+import { socketHost } from "../utils/APIRoutes";
+
+import { useCookies } from "react-cookie";
+import { isExistCookie } from "../utils/CookieChecker";
+import { Buffer } from "buffer";
 import ChatContainer from "../components/ChatContainer";
 import Contacts from "../components/Contacts";
 import Welcome from "../components/Welcome";
+import { useGlobalData } from "../context/context";
 
 export default function Chat() {
+  const [cookies] = useCookies(["auth"]);
+
+  const storage = useGlobalData();
   const navigate = useNavigate();
-  const [contacts, setContacts] = useState([]);
-  const [currentChat, setCurrentChat] = useState(undefined);
-  const [currentUser, setCurrentUser] = useState(undefined);
-  const [inputValue, setInputValue] = useState(0);
 
-  const socket = new WebSocket(host);
+  const [initLoading, setInitLoading] = useState(false);
 
-  socket.onmessage = function (e) {
-    console.log(e);
-  };
-  // useEffect(async () => {
-  //   if (!localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
-  //     navigate("/login");
-  //   } else {
-  //     setCurrentUser(
-  //       await JSON.parse(
-  //         localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-  //       )
-  //     );
-  //   }
-  // }, []);
   useEffect(() => {
-    // if (currentUser) {
-    //   socket.current = io(host);
-    //   socket.current.emit("add-user", currentUser._id);
-    // }
+    if (!isExistCookie(cookies)) {
+      navigate("/login");
+    } else {
+      const socket = new WebSocket(socketHost);
+
+      storage.setGlobalData(
+        socket,
+        JSON.parse(Buffer.from(cookies.auth, "base64").toString("utf8")).name
+      );
+
+      socket.onmessage = function (e) {
+        console.log(e);
+      };
+
+      setInitLoading(true);
+    }
   }, []);
 
-  // useEffect(async () => {
-  //   if (currentUser) {
-  //     if (currentUser.isAvatarImageSet) {
-  //       const data = await axios.get(`${allUsersRoute}/${currentUser._id}`);
-  //       setContacts(data.data);
-  //     } else {
-  //       navigate("/setAvatar");
-  //     }
-  //   }
-  // }, [currentUser]);
-  const handleChatChange = (chat) => {
-    setCurrentChat(chat);
-  };
   return (
     <>
       <Container>
+        <div className="container">
+          <Contacts userName={storage.userName} />
+          {!initLoading ? (
+            <Welcome />
+          ) : (
+            <ChatContainer userName={storage.userName} />
+          )}
+        </div>
+        {/* <span>Your Name : {userName}</span>
         <input
           value={inputValue}
           onChange={(e) => {
@@ -67,12 +65,12 @@ export default function Chat() {
         ></input>
         <button
           onClick={() => {
-            socket.send(inputValue);
+            socketWeb.send(inputValue);
             setInputValue("");
           }}
         >
           Submit
-        </button>
+        </button> */}
         {/* <div className="container">
           <Contacts contacts={contacts} changeChat={handleChatChange} />
           {currentChat === undefined ? (

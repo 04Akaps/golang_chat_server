@@ -1,4 +1,5 @@
 export const host = "ws://localhost:8080/room";
+export const socketHost = "ws://localhost:8080/room";
 export const loginRoute = `${host}/api/auth/login`;
 export const registerRoute = `${host}/api/auth/register`;
 export const logoutRoute = `${host}/api/auth/logout`;

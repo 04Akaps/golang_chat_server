@@ -1,35 +1,42 @@
 package main
 
 import (
-	"html/template"
 	"log"
 	"net/http"
-	"path/filepath"
-	"sync"
+	"strings"
 
+	"go_chat/auth"
 	"go_chat/client"
 
 	"github.com/rs/cors"
+	"github.com/stretchr/gomniauth"
+	"github.com/stretchr/gomniauth/providers/facebook"
+	"github.com/stretchr/gomniauth/providers/github"
+	"github.com/stretchr/gomniauth/providers/google"
+	// "github.com/stretchr/gomniauth/providers/facebook"
+	// "github.com/stretchr/gomniauth/providers/github"
 )
 
-type templateHandler struct {
-	once     sync.Once // 얼마나 많은 고루틴이 접근을 하든 상관없이 단 한번만 실행 된다는 것을 보장한다.
-	filename string
-	templ    *template.Template
-}
-
-func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 소스 파일을 로드하고, 컴파일 한 후 실행한뒤
-	// 출력에 전달 해 준다.
-	// 해당 코드가 사용가능한 이유는 해당 메소드가 http.Handler인터페이스를 만족하기 떄문이다.
-	t.once.Do(func() {
-		t.templ = template.Must(
-			template.ParseFiles(filepath.Join("page", t.filename)))
-	})
-	t.templ.Execute(w, nil)
-}
+const (
+	googleId         = "134341176703-okntrpan6f9ivdo1dn3avphkd70pl4nb.apps.googleusercontent.com"
+	googlePassword   = "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"
+	facebookId       = "3398218997172821"
+	facebookPassword = "c4cdc56c0ee1f6d45e694f5b05165e8e"
+	githubId         = "3dc3a526e845020106dc"
+	githubPassword   = "0cae3f982a7f96cbc8bddd3d9d0e8a998af961e1"
+	authKey          = "123423424"
+	baseUri          = "http://localhost:8080/auth/callback"
+)
 
 func main() {
+	gomniauth.SetSecurityKey(authKey)
+	gomniauth.WithProviders(
+		google.New(googleId, googlePassword, strings.Join([]string{baseUri, "/google"}, "")),
+		// https://console.cloud.google.com/apis/credentials/oauthclient/134341176703-okntrpan6f9ivdo1dn3avphkd70pl4nb.apps.googleusercontent.com?hl=ko&project=golang-chat-378904
+		facebook.New(facebookId, facebookPassword, strings.Join([]string{baseUri, "/facebook"}, "")),
+		// https://developers.facebook.com/apps/3398218997172821/fb-login/settings/
+		github.New(githubId, githubPassword, strings.Join([]string{baseUri, "/github"}, "")),
+	)
 	r := client.NewRoom()
 	mux := http.NewServeMux()
 
@@ -37,15 +44,15 @@ func main() {
 		AllowedOrigins:   []string{"http://localhost:3000/"},
 		AllowCredentials: true,
 		MaxAge:           0,
-		Debug:            true,
+		Debug:            false,
 	})
 	handler := cors.Default().Handler(mux)
 	handler = corHandler.Handler(handler)
 
 	go r.Run() // channel을 받아주는 select문 시작
 
-	mux.Handle("/room", r)
-	mux.Handle("/", &templateHandler{filename: "index.html"})
+	mux.Handle("/room", auth.MustAuth(r))
+	mux.HandleFunc("/auth/", auth.Loginhandler)
 
 	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatal((err))

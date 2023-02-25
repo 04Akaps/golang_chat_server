@@ -6,10 +6,13 @@ import Logo from "../assets/logo.svg";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { loginRoute } from "../utils/APIRoutes";
+import { isExistCookie } from "../utils/CookieChecker";
+
+import { useCookies } from "react-cookie";
 
 export default function Login() {
+  const [cookies, setCookie] = useCookies(["auth"]);
   const navigate = useNavigate();
-  const [values, setValues] = useState({ username: "", password: "" });
   const toastOptions = {
     position: "bottom-right",
     autoClose: 8000,
@@ -18,75 +21,50 @@ export default function Login() {
     theme: "dark",
   };
   useEffect(() => {
-    if (localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)) {
+    if (isExistCookie(cookies)) {
       navigate("/");
     }
   }, []);
 
-  const handleChange = (event) => {
-    setValues({ ...values, [event.target.name]: event.target.value });
-  };
-
-  const validateForm = () => {
-    const { username, password } = values;
-    if (username === "") {
-      toast.error("Email and Password is required.", toastOptions);
-      return false;
-    } else if (password === "") {
-      toast.error("Email and Password is required.", toastOptions);
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (validateForm()) {
-      const { username, password } = values;
-      const { data } = await axios.post(loginRoute, {
-        username,
-        password,
-      });
-      if (data.status === false) {
-        toast.error(data.msg, toastOptions);
-      }
-      if (data.status === true) {
-        localStorage.setItem(
-          process.env.REACT_APP_LOCALHOST_KEY,
-          JSON.stringify(data.user)
-        );
-
-        navigate("/");
-      }
-    }
+  const handleOauth2 = async (oAuth) => {
+    return window.location.replace(`http://localhost:8080/auth/login/${oAuth}`);
   };
 
   return (
     <>
       <FormContainer>
-        <form action="" onSubmit={(event) => handleSubmit(event)}>
+        <div>
           <div className="brand">
             <img src={Logo} alt="logo" />
-            <h1>snappy</h1>
+            <h1>Free Chat</h1>
           </div>
-          <input
-            type="text"
-            placeholder="Username"
-            name="username"
-            onChange={(e) => handleChange(e)}
-            min="3"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            name="password"
-            onChange={(e) => handleChange(e)}
-          />
-          <button type="submit">Log In</button>
-          <span>
-            Don't have an account ? <Link to="/register">Create One.</Link>
-          </span>
-        </form>
+          <button
+            type="button"
+            onClick={() => {
+              handleOauth2("google");
+            }}
+          >
+            Google
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleOauth2("facebook");
+            }}
+          >
+            FaceBook
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleOauth2("github");
+            }}
+          >
+            Github
+          </button>
+
+          {/* <button type="submit">Log In</button> */}
+        </div>
       </FormContainer>
       <ToastContainer />
     </>
@@ -116,7 +94,7 @@ const FormContainer = styled.div`
     }
   }
 
-  form {
+  div {
     display: flex;
     flex-direction: column;
     gap: 2rem;

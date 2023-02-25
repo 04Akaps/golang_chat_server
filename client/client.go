@@ -41,7 +41,7 @@ func (c *Client) Read() {
 
 func (c *Client) Write() {
 	defer c.Socket.Close()
-
+	fmt.Println("찍히냐 write")
 	for msg := range c.Send {
 		err := c.Socket.WriteMessage(websocket.TextMessage, msg)
 		if err != nil {
@@ -65,10 +65,12 @@ func (r *Room) Run() {
 		select {
 		case client := <-r.Join:
 			r.Clients[client] = true // client가 새로 들어 올떄
+			fmt.Println("찍히냐, join")
 			// r.tracer.Trace(("New client joined")) // 로그 찍는 것
 		case client := <-r.Leave:
 			delete(r.Clients, client) // 나갈 떄에는 map값에서 client를 제거
 			close(client.Send)        // 이후 client의 socker을 닫는다.
+			fmt.Println("찍히냐, leave")
 		case msg := <-r.Forward: // 만약 특정 메시지가 방에 들어오면
 			for client := range r.Clients {
 				client.Send <- msg // 모든 client에게 전달 해 준다.
