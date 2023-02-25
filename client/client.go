@@ -1,29 +1,36 @@
 package client
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-
-	"go_chat/trace"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/objx"
 )
 
 type Room struct {
-	Forward chan []byte // 수신 메시지를 보관하는 채널
+	Forward chan *message // 수신 메시지를 보관하는 채널
 	// 들어오는 메시지를 다른 모든 클라이언트로 보내는 데 사용한다.
 
-	Join    chan *Client     // 방에 들어오는 client를 위한 채널
-	Leave   chan *Client     // 방에서 나가는 Client를 위한 채널
+	Join  chan *Client // 접속에 대한 채널
+	Leave chan *Client // 접속에 대한 채널
+
 	Clients map[*Client]bool // 현재 방에 있는 모든 클라이언트를 의미
-	tracer  trace.Tracer
 }
 
 type Client struct {
-	Socket *websocket.Conn // client의 웹 소켓
-	Send   chan []byte     // 전송되는 채널
-	Room   *Room           // 클라이언트가 속해 있는 방
+	Socket   *websocket.Conn        // client의 웹 소켓
+	Send     chan *message          // 전송되는 채널
+	Room     *Room                  // 클라이언트가 속해 있는 방
+	UserData map[string]interface{} // user의 정보를 가짐
+}
+
+type message struct {
+	Name      string
+	Message   string
+	When      time.Time
+	AvatarURL string
 }
 
 func (c *Client) Read() {
@@ -31,9 +38,16 @@ func (c *Client) Read() {
 	// 받은 메시지를 room타입에게 계속해서 전송을 한다.
 	defer c.Socket.Close()
 	for {
-		_, msg, err := c.Socket.ReadMessage()
+		var msg *message
+		err := c.Socket.ReadJSON(&msg)
 		if err != nil {
 			return
+		}
+
+		msg.When = time.Now()
+		msg.Name = c.UserData["name"].(string)
+		if avatarURL, ok := c.UserData["avatar_url"]; ok {
+			msg.AvatarURL = avatarURL.(string)
 		}
 		c.Room.Forward <- msg
 	}
@@ -41,9 +55,8 @@ func (c *Client) Read() {
 
 func (c *Client) Write() {
 	defer c.Socket.Close()
-	fmt.Println("찍히냐 write")
 	for msg := range c.Send {
-		err := c.Socket.WriteMessage(websocket.TextMessage, msg)
+		err := c.Socket.WriteJSON(msg)
 		if err != nil {
 			return
 		}
@@ -51,9 +64,8 @@ func (c *Client) Write() {
 }
 
 func NewRoom() *Room {
-	fmt.Println("들어옴")
 	return &Room{
-		Forward: make(chan []byte),
+		Forward: make(chan *message),
 		Join:    make(chan *Client),
 		Leave:   make(chan *Client),
 		Clients: make(map[*Client]bool),
@@ -65,13 +77,12 @@ func (r *Room) Run() {
 		select {
 		case client := <-r.Join:
 			r.Clients[client] = true // client가 새로 들어 올떄
-			fmt.Println("찍히냐, join")
 			// r.tracer.Trace(("New client joined")) // 로그 찍는 것
 		case client := <-r.Leave:
 			delete(r.Clients, client) // 나갈 떄에는 map값에서 client를 제거
 			close(client.Send)        // 이후 client의 socker을 닫는다.
-			fmt.Println("찍히냐, leave")
 		case msg := <-r.Forward: // 만약 특정 메시지가 방에 들어오면
+
 			for client := range r.Clients {
 				client.Send <- msg // 모든 client에게 전달 해 준다.
 			}
@@ -100,11 +111,18 @@ func (r *Room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	authCookie, err := req.Cookie("auth")
+	if err != nil {
+		log.Fatal("auth cookie is failed", err)
+		return
+	}
+
 	// 문제가 없다면 client를 생성하여 방에 입장했다고 채널에 전송한다.
 	client := &Client{
-		Socket: Socket,
-		Send:   make(chan []byte, messageBufferSize),
-		Room:   r,
+		Socket:   Socket,
+		Send:     make(chan *message, messageBufferSize),
+		Room:     r,
+		UserData: objx.MustFromBase64(authCookie.Value),
 	}
 
 	r.Join <- client

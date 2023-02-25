@@ -3,47 +3,21 @@ import styled from "styled-components";
 import ChatInput from "./ChatInput";
 import Logout from "./Logout";
 
-export default function ChatContainer({ userName }) {
-  // const [messages, setMessages] = useState([]);
-  // const [arrivalMessage, setArrivalMessage] = useState(null);
-
+export default function ChatContainer({
+  userName,
+  socket,
+  chatContents,
+  profileImg,
+}) {
   const handleSendMsg = async (msg) => {
-    // const data = await JSON.parse(
-    //   localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-    // );
-    // socket.current.emit("send-msg", {
-    //   to: currentChat._id,
-    //   from: data._id,
-    //   msg,
-    // });
-    // await axios.post(sendMessageRoute, {
-    //   from: data._id,
-    //   to: currentChat._id,
-    //   message: msg,
-    // });
-    // const msgs = [...messages];
-    // msgs.push({ fromSelf: true, message: msg });
-    // setMessages(msgs);
+    socket.send(JSON.stringify({ Message: msg }));
   };
-
-  useEffect(() => {
-    // if (socket.current) {
-    //   socket.current.on("msg-recieve", (msg) => {
-    //     setArrivalMessage({ fromSelf: false, message: msg });
-    //   });
-    // }
-  }, []);
 
   return (
     <Container>
       <div className="chat-header">
         <div className="user-details">
-          <div className="avatar">
-            {/* <img
-              src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
-              alt=""
-            /> */}
-          </div>
+          <div className="avatar"></div>
           <div className="username">
             <h3>{userName}</h3>
           </div>
@@ -51,21 +25,25 @@ export default function ChatContainer({ userName }) {
         <Logout />
       </div>
       <div className="chat-messages">
-        {/* {messages.map((message) => {
-          return (
-            <div ref={scrollRef} key={uuidv4()}>
-              <div
-                className={`message ${
-                  message.fromSelf ? "sended" : "recieved"
-                }`}
-              >
-                <div className="content ">
-                  <p>{message.message}</p>
+        {chatContents.length !== 0
+          ? chatContents.map((result, index) => {
+              const isMyText = result.Name === userName;
+              return (
+                <div
+                  className={`message ${isMyText ? "sended" : "recieved"}`}
+                  key={index}
+                >
+                  <div className="content-box">
+                    <div className="content-header">
+                      <img src={profileImg} alt="profile" />
+                      <span>{userName}</span>
+                    </div>
+                    <div className="content">{result.Message}</div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })} */}
+              );
+            })
+          : null}
       </div>
       <ChatInput handleSendMsg={handleSendMsg} />
     </Container>
@@ -118,15 +96,36 @@ const Container = styled.div`
     .message {
       display: flex;
       align-items: center;
-      .content {
+
+      .content-box {
+        flex-direction: column;
         max-width: 40%;
-        overflow-wrap: break-word;
-        padding: 1rem;
-        font-size: 1.1rem;
-        border-radius: 1rem;
-        color: #d1d1d1;
-        @media screen and (min-width: 720px) and (max-width: 1080px) {
-          max-width: 70%;
+
+        .content-header {
+          display: flex;
+          flex-direction: row;
+
+          span {
+            display: flex;
+            color: #fff;
+            align-items: flex-end;
+            padding-left: 5px;
+          }
+          img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+          }
+        }
+        .content {
+          overflow-wrap: break-word;
+          padding: 1rem;
+          font-size: 1.1rem;
+          border-radius: 1rem;
+          color: #d1d1d1;
+          @media screen and (min-width: 720px) and (max-width: 1080px) {
+            max-width: 70%;
+          }
         }
       }
     }

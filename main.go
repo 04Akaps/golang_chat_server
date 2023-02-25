@@ -46,6 +46,7 @@ func main() {
 		MaxAge:           0,
 		Debug:            false,
 	})
+
 	handler := cors.Default().Handler(mux)
 	handler = corHandler.Handler(handler)
 
@@ -53,6 +54,7 @@ func main() {
 
 	mux.Handle("/room", auth.MustAuth(r))
 	mux.HandleFunc("/auth/", auth.Loginhandler)
+	mux.HandleFunc("/logout", auth.LogoutHandler)
 
 	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatal((err))

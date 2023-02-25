@@ -14,12 +14,14 @@ import Welcome from "../components/Welcome";
 import { useGlobalData } from "../context/context";
 
 export default function Chat() {
-  const [cookies] = useCookies(["auth"]);
+  const [cookies, removeToken] = useCookies(["auth"]);
 
   const storage = useGlobalData();
   const navigate = useNavigate();
 
   const [initLoading, setInitLoading] = useState(false);
+  const [chatContents, setChatContents] = useState([]);
+  const [profileImg, setProfileImg] = useState("");
 
   useEffect(() => {
     if (!isExistCookie(cookies)) {
@@ -27,58 +29,56 @@ export default function Chat() {
     } else {
       const socket = new WebSocket(socketHost);
 
-      storage.setGlobalData(
-        socket,
-        JSON.parse(Buffer.from(cookies.auth, "base64").toString("utf8")).name
+      const authData = JSON.parse(
+        Buffer.from(cookies.auth, "base64").toString("utf8")
       );
+      storage.setGlobalData(socket, authData.name);
 
-      socket.onmessage = function (e) {
-        console.log(e);
-      };
+      setProfileImg(authData.avatar_url);
 
       setInitLoading(true);
     }
   }, []);
 
+  if (storage.socket) {
+    storage.socket.onmessage = function (e) {
+      const receiveData = JSON.parse(e.data);
+      if (chatContents.length === 0) {
+        setChatContents([receiveData]);
+      } else {
+        setChatContents([...chatContents, receiveData]);
+      }
+    };
+
+    storage.socket.onclose = function (e) {
+      alert("서버가 닫혀있기 떄문에 로그아웃 됩니다.");
+
+      document.cookie =
+        "auth" +
+        "=" +
+        ("/" ? ";path=" + "/" : "") +
+        ";expires=Thu, 01 Jan 1970 00:00:01 GMT";
+
+      window.location.replace("/login");
+    };
+  }
+
   return (
     <>
       <Container>
         <div className="container">
-          <Contacts userName={storage.userName} />
-          {!initLoading ? (
-            <Welcome />
+          <Contacts profileImg={profileImg} userName={storage.userName} />
+          {!initLoading && !storage.room ? (
+            <Welcome userName={storage.userName} />
           ) : (
-            <ChatContainer userName={storage.userName} />
+            <ChatContainer
+              userName={storage.userName}
+              socket={storage.socket}
+              chatContents={chatContents}
+              profileImg={profileImg}
+            />
           )}
         </div>
-        {/* <span>Your Name : {userName}</span>
-        <input
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-          }}
-          style={{
-            background: "#fff",
-            width: "300px",
-            padding: "20px",
-          }}
-        ></input>
-        <button
-          onClick={() => {
-            socketWeb.send(inputValue);
-            setInputValue("");
-          }}
-        >
-          Submit
-        </button> */}
-        {/* <div className="container">
-          <Contacts contacts={contacts} changeChat={handleChatChange} />
-          {currentChat === undefined ? (
-            <Welcome />
-          ) : (
-            <ChatContainer currentChat={currentChat} socket={socket} />
-          )}
-        </div> */}
       </Container>
     </>
   );

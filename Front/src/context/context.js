@@ -3,10 +3,15 @@ import React, { useContext } from "react";
 class GlobalData {
   socket;
   userName;
+  roomNumber;
 
   setGlobalData = (socket, userName) => {
     this.socket = socket;
     this.userName = userName;
+  };
+
+  setRoom = (room) => {
+    this.roomNumber = room;
   };
 }
 
