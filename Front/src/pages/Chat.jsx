@@ -46,6 +46,8 @@ export default function Chat() {
   if (storage.socket) {
     storage.socket.onmessage = function (e) {
       const receiveData = JSON.parse(e.data);
+
+      console.log(receiveData);
       if (chatContents.length === 0) {
         setChatContents([receiveData]);
       } else {

@@ -52,8 +52,9 @@ func main() {
 	handler = corHandler.Handler(handler)
 
 	go r.Run() // channel을 받아주는 select문 시작
-	// &client.FileUpload{}
+
 	mux.Handle("/room", auth.MustAuth(r))
+	http.Handle("/avatars/", http.StripPrefix("/avatars/", http.FileServer(http.Dir("./avatars"))))
 	mux.HandleFunc("/upload", client.UploadFile)
 	mux.HandleFunc("/auth/", auth.Loginhandler)
 	mux.HandleFunc("/logout", auth.LogoutHandler)

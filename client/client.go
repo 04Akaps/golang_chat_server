@@ -49,7 +49,6 @@ func (c *Client) Read() {
 		msg.When = time.Now()
 		msg.Name = c.UserData["name"].(string)
 		url, _ := c.Room.Avatar.GetAvatarURL(c)
-
 		msg.AvatarURL = url
 		c.Room.Forward <- msg
 	}
