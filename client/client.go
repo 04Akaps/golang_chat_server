@@ -17,6 +17,8 @@ type Room struct {
 	Leave chan *Client // 접속에 대한 채널
 
 	Clients map[*Client]bool // 현재 방에 있는 모든 클라이언트를 의미
+
+	Avatar Avatar
 }
 
 type Client struct {
@@ -46,9 +48,9 @@ func (c *Client) Read() {
 
 		msg.When = time.Now()
 		msg.Name = c.UserData["name"].(string)
-		if avatarURL, ok := c.UserData["avatar_url"]; ok {
-			msg.AvatarURL = avatarURL.(string)
-		}
+		url, _ := c.Room.Avatar.GetAvatarURL(c)
+
+		msg.AvatarURL = url
 		c.Room.Forward <- msg
 	}
 }
@@ -63,12 +65,13 @@ func (c *Client) Write() {
 	}
 }
 
-func NewRoom() *Room {
+func NewRoom(avatar Avatar) *Room {
 	return &Room{
 		Forward: make(chan *message),
 		Join:    make(chan *Client),
 		Leave:   make(chan *Client),
 		Clients: make(map[*Client]bool),
+		Avatar:  avatar,
 	}
 }
 
@@ -82,7 +85,6 @@ func (r *Room) Run() {
 			delete(r.Clients, client) // 나갈 떄에는 map값에서 client를 제거
 			close(client.Send)        // 이후 client의 socker을 닫는다.
 		case msg := <-r.Forward: // 만약 특정 메시지가 방에 들어오면
-
 			for client := range r.Clients {
 				client.Send <- msg // 모든 client에게 전달 해 준다.
 			}

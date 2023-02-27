@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/gomniauth/providers/facebook"
 	"github.com/stretchr/gomniauth/providers/github"
 	"github.com/stretchr/gomniauth/providers/google"
-	// "github.com/stretchr/gomniauth/providers/facebook"
-	// "github.com/stretchr/gomniauth/providers/github"
 )
 
 const (
@@ -28,7 +26,7 @@ const (
 	baseUri          = "http://localhost:8080/auth/callback"
 )
 
-func main() {
+func init() {
 	gomniauth.SetSecurityKey(authKey)
 	gomniauth.WithProviders(
 		google.New(googleId, googlePassword, strings.Join([]string{baseUri, "/google"}, "")),
@@ -37,7 +35,10 @@ func main() {
 		// https://developers.facebook.com/apps/3398218997172821/fb-login/settings/
 		github.New(githubId, githubPassword, strings.Join([]string{baseUri, "/github"}, "")),
 	)
-	r := client.NewRoom()
+}
+
+func main() {
+	r := client.NewRoom(client.UseAuthAvatar)
 	mux := http.NewServeMux()
 
 	corHandler := cors.New(cors.Options{
@@ -51,8 +52,9 @@ func main() {
 	handler = corHandler.Handler(handler)
 
 	go r.Run() // channel을 받아주는 select문 시작
-
+	// &client.FileUpload{}
 	mux.Handle("/room", auth.MustAuth(r))
+	mux.HandleFunc("/upload", client.UploadFile)
 	mux.HandleFunc("/auth/", auth.Loginhandler)
 	mux.HandleFunc("/logout", auth.LogoutHandler)
 

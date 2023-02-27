@@ -14,7 +14,7 @@ import Welcome from "../components/Welcome";
 import { useGlobalData } from "../context/context";
 
 export default function Chat() {
-  const [cookies, removeToken] = useCookies(["auth"]);
+  const [cookies] = useCookies(["auth"]);
 
   const storage = useGlobalData();
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ export default function Chat() {
   const [initLoading, setInitLoading] = useState(false);
   const [chatContents, setChatContents] = useState([]);
   const [profileImg, setProfileImg] = useState("");
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     if (!isExistCookie(cookies)) {
@@ -32,9 +33,11 @@ export default function Chat() {
       const authData = JSON.parse(
         Buffer.from(cookies.auth, "base64").toString("utf8")
       );
-      storage.setGlobalData(socket, authData.name);
+      console.log(authData);
 
+      storage.setGlobalData(socket, authData.name);
       setProfileImg(authData.avatar_url);
+      setUserId(authData.user_id);
 
       setInitLoading(true);
     }
@@ -67,7 +70,11 @@ export default function Chat() {
     <>
       <Container>
         <div className="container">
-          <Contacts profileImg={profileImg} userName={storage.userName} />
+          <Contacts
+            userId={userId}
+            profileImg={profileImg}
+            userName={storage.userName}
+          />
           {!initLoading && !storage.room ? (
             <Welcome userName={storage.userName} />
           ) : (

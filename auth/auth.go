@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -78,9 +80,14 @@ func Loginhandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		m := md5.New()
+		io.WriteString(m, strings.ToLower(user.Email()))
+
 		authCookieValue := objx.New(map[string]interface{}{
+			"user_id":    m.Sum(nil), // 고유한 userID는 이메일 기반으로 해시값을 사용
 			"name":       user.Name(),
 			"avatar_url": user.AvatarURL(),
+			"email":      user.Email(),
 		}).MustBase64()
 
 		http.SetCookie(w, &http.Cookie{
