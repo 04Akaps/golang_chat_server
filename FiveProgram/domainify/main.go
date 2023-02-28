@@ -22,7 +22,6 @@ func main() {
 
 	for s.Scan() {
 		text := strings.ToLower(s.Text())
-		fmt.Println(text)
 
 		var newText []rune
 
