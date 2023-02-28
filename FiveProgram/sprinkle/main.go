@@ -37,7 +37,5 @@ func main() {
 		fmt.Println(strings.Replace(t, otherWord, s.Text(), -1))
 		// replace는 t의 문자열 값에서, otherwork의 값을 s.Text()로 바꾼다는 의미
 		// 마지막은 여러개가 있을 떄 몇번 반복하냐의 의미이며, -1은 모든 값을 바꾸겠다는 의미
-		fmt.Println("-------\n", t)
-		fmt.Println("-------\n", s.Text())
 	}
 }
