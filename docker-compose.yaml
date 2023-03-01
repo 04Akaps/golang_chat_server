@@ -1,0 +1,10 @@
+services:
+  go_server:
+    build: "./"
+    container_name: "go_chat_server"
+    ports:
+      - 1010:8080
+      - 2020:8080
+      - 3030:8080
+      - 4040:8080
+    restart: always
